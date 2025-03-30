@@ -134,9 +134,6 @@ const App = () => {
                     <input id="searchBar" type="text" className="searchbar block border-slate-700 border-3 pl-2 text-center w-full text-slate-300 rounded-full font-bold" placeholder="search movie" onChange={(e) => { setSearchTerm(e.target.value); }} />
                 </section>
 
-                <h3 className="text-white mx-auto justify-center block"> {searchTerm} </h3>
-
-
                 <br />
 
                 <section id="trending" className="" >
