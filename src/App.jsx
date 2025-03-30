@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
 import MovieCard from './components/MovieCard.jsx'
+import { fetchMovieSearches, storeSearches } from './utils/appwrite.js'
+import {useDebounce} from 'react-use'
+import {constructMovieImageUrl} from "./utils/util.js"
 
 // import './App.css'
 
 const App = () => {
     // const [count, setCount] = useState(0);
     const [searchTerm, setSearchTerm] = useState("");
+    const [debounceSearchTerm, setDebounceSearchTerm] = useState("");
     const [movies, setMovies] = useState([]);
     const [trendingMovies, setTrendingMovies] = useState([]);
 
@@ -21,28 +23,30 @@ const App = () => {
     };
 
 
-    const fetchMovies = async () => {
+    const fetchMovies = async (searchTerm = "") => {
 
-        const url = 'https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=false&language=en-US&page=1&sort_by=popularity.desc';
+        let url = 'https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=false&language=en-US&page=1&sort_by=popularity.desc';
+        if (![null, undefined, ''].includes(searchTerm)) {
+            url = `https://api.themoviedb.org/3/search/movie?query=${searchTerm}&include_adult=false&language=en-US&page=1`;
+        }
 
         try {
+            console.log(`Querying ${url}`);
             const response = await fetch(url, options);
             if (response.ok) {
                 console.log("valid response received");
             }
-            const t_result = await response.json();
-            setMovies(t_result.results);
-            console.log(movieList);
+            const respJson = await response.json();
+            setMovies(respJson.results);
+            console.log(respJson.results);
+            return respJson.results;
         }
         catch (e) {
             if (typeof response !== 'undefined') {
                 console.log(`Ooosp Http response code: ${response.status}`);
             }
             console.log(`ooops, got an error : ${e}`);
-        }
-        finally {
-            console.log("Finished fetching movies");
-
+            return []
         }
 
     }
@@ -68,10 +72,38 @@ const App = () => {
         }
     }
 
+
+    const fetchTrendingAppwrite = async () => {
+        const movies  = await fetchMovieSearches();
+        setTrendingMovies(movies);
+        console.log(movies);
+    }
+
+    useDebounce( () => {
+        setDebounceSearchTerm(searchTerm);
+    }, 800, [searchTerm]);
+
+    //Event handler on debounceSearchTerm
+    useEffect(() => {
+        const fetchData = async () => {
+            console.log(`searchTerm updated: ${debounceSearchTerm}`)
+            let movies = await fetchMovies(debounceSearchTerm);
+            if (movies.length > 0) {
+                console.log("storing search... ");
+                console.log(movies);
+                await storeSearches(debounceSearchTerm, movies[0]);
+            }
+        }
+        fetchData();
+    }, [debounceSearchTerm]);
+
+
+    // Event handler for Initialization
     useEffect(() => {
         console.log("Initializing...");
         fetchMovies();
-        fetchTrendingMovies(6);
+        // fetchTrendingMovies(6);
+        fetchTrendingAppwrite();
 
     }, []);
 
@@ -114,7 +146,7 @@ const App = () => {
 
                         {trendingMovies.map((movie, index) => {
                             return (
-                                <li key={movie.id} className="flex-row flex-nowrap">
+                                <li id={movie.movie_id} key={movie.id || movie.movie_id} className="flex-row flex-nowrap">
                                     <span className="absolute w-2 bottom-[0px] text-9xl bg-gradient-to-tr from-amber-300 to-amber-900 bg-clip-text text-transparent stroke-white "> {index + 1} </span>
                                     <MovieCard movie={movie} showDetail={false} />
 
@@ -122,7 +154,7 @@ const App = () => {
                             )
                         })}
 
-                        < /ul>
+                    </ul>
                 </section>
 
                 <hr className="text-slate-400 m-5" />
@@ -137,7 +169,7 @@ const App = () => {
                     })}
                 </ul>
 
-                <footer  className="text-center text-slate-800 border-t-slate-800 border-t-1 mt-10 mb-10">
+                <footer className="text-center text-slate-800 border-t-slate-800 border-t-1 mt-10 mb-10">
 
                     Copyright @Advaeta
                 </footer>
