@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@theme {
+  /* Customization */
+
+
+}
+
+@layer base,  components ;
+
+@layer base {
+  
+
+}
+
+@layer components {
+
+
+}
